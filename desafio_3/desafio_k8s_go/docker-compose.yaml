@@ -1,0 +1,9 @@
+version: '3'
+services:
+  web:
+    build: .
+    container_name: 'app_go'
+    security_opt:
+      - apparmor=unconfined
+    ports:
+     - "8000:8000"

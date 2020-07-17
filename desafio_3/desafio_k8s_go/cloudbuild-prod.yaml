@@ -1,0 +1,36 @@
+steps:
+
+- id: "Rodando docker-compose"
+  name: 'gcr.io/$PROJECT_ID/docker-compose'
+  args: ['-f', 'docker-compose.yaml', 'up', '-d']
+
+- id: "test"
+  name: "gcr.io/cloud-builders/docker"
+  args: ['exec', '-t', 'app_go', 'go', 'test']
+
+- id: "build app go"
+  name: "gcr.io/cloud-builders/docker"
+  args:
+    - "build"
+    - "-t"
+    - "gcr.io/$PROJECT_ID/app_go:$SHORT_SHA"
+    - "."
+- id: "pushing image"
+  name: "gcr.io/cloud-builders/docker"
+  args: ["push", "gcr.io/$PROJECT_ID/app_go:$SHORT_SHA"]
+
+- id: "environment deployment"
+  name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: '/bin/sh'
+  args: 
+    - '-c'
+    - |
+        sed 's#img_app_go#gcr.io/$PROJECT_ID/app_go:$SHORT_SHA#g' env/deployment.yaml > k8s/deployment.yaml;
+        cat k8s/deployment.yaml;
+
+- id: "deployment k8s"
+  name: 'gcr.io/cloud-builders/kubectl'
+  args: ["apply", "-f", "k8s/"]
+  env: 
+  - 'CLOUDSDK_COMPUTE_ZONE=us-central1-c'
+  - 'CLOUDSDK_CONTAINER_CLUSTER=cluster-1'
